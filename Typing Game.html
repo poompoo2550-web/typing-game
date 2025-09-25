@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>เกมฝึกพิมพ์เร็ว</title>
+<style>
+    body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background: linear-gradient(135deg, #74ebd5, #ACB6E5);
+  background-size: 200% 200%;
+  animation: gradientMove 10s ease infinite;
+}
+
+    @keyframes gradientMove {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+#gameContainer {
+  background: rgba(255, 255, 255, 0.85);
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+  width: 400px;
+  backdrop-filter: blur(8px);
+}
+
+    h1 { 
+        color: #1d4ed8; 
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    }
+    #word { 
+        font-size: 40px; 
+        font-weight: bold; 
+        margin: 20px; 
+        color: #2563eb; 
+        transition: all 0.3s ease;
+    }
+    input { 
+        font-size: 18px; 
+        padding: 12px; 
+        width: 280px; 
+        border: 2px solid #ccc; 
+        border-radius: 8px; 
+        outline: none; 
+        margin-top: 10px;
+    }
+    input:focus { 
+        border-color: #2563eb; 
+        box-shadow: 0 0 8px rgba(37,99,235,0.4);
+    }
+    #score, #time, #wpm { 
+        font-size: 20px; 
+        margin: 10px; 
+        font-weight: bold; 
+    }
+    select, button { 
+        padding: 10px 15px; 
+        font-size: 16px; 
+        margin: 8px; 
+        border-radius: 8px; 
+        border: none;
+    }
+    select { 
+        background: #f3f4f6; 
+        border: 1px solid #ccc;
+    }
+    button { 
+        background: #2563eb; 
+        color: white; 
+        cursor: pointer; 
+        font-weight: bold;
+        transition: 0.3s;
+    }
+    button:hover { 
+        background: #1e40af; 
+    }
+    .box { 
+        background: white; 
+        padding: 30px; 
+        border-radius: 15px; 
+        display: inline-block; 
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+    #progressContainer {
+        width: 100%;
+        background: #e5e7eb;
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 15px 0;
+        height: 20px;
+    }
+    #progressBar {
+        height: 100%;
+        width: 100%;
+        background: #22c55e;
+        transition: width 1s linear, background 0.3s;
+    }
+    #resultPopup {
+        display: none;
+        position: fixed;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        z-index: 1000;
+        text-align: center;
+        width: 300px;
+    }
+    #overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 500;
+    }
+</style>
+</head>
+<body>
+    <div class="box">
+        <h1>เกมฝึกพิมพ์เร็ว</h1>
+
+        <div>
+            <label>ภาษา:</label>
+            <select id="language">
+                <option value="th">ไทย</option>
+                <option value="en">อังกฤษ</option>
+            </select>
+
+            <label>ระดับ:</label>
+            <select id="level">
+                <option value="easy">ง่าย</option>
+                <option value="medium">ปานกลาง</option>
+                <option value="hard">ยาก</option>
+            </select>
+        </div>
+
+        <div id="score">คะแนน: 0</div>
+        <div id="time">เวลา: 30 วินาที</div>
+        <div id="wpm">WPM: 0</div>
+
+        <div id="progressContainer"><div id="progressBar"></div></div>
+
+        <div id="word">เริ่มเกม</div>
+        <input type="text" id="text" placeholder="พิมพ์คำที่เห็นที่นี่..." autofocus>
+        <br><br>
+        <button onclick="startGame()">เริ่มเกมใหม่</button>
+    </div>
+
+    <div id="overlay"></div>
+    <div id="resultPopup">
+        <h2>หมดเวลา!</h2>
+        <p id="finalScore"></p>
+        <p id="finalWPM"></p>
+        <button onclick="closePopup()">ปิด</button>
+    </div>
+
+<script>
+    const wordsTH = {
+        easy: [
+            "แมว","หมา","ปลา","ข้าว","นก","ดี","รัก","ร้อน","เย็น","น้ำ",
+            "ไฟ","บ้าน","โต๊ะ","เก้าอี้","หนัง","ถนน","มือ","เท้า","ตา","หู",
+            "ปาก","รถ","เรือ","ดิน","ทะเล","ฝน","ฟ้า","เมฆ","เขา","ดอก",
+            "ใบ","แสง","วัน","คืน","ลม","หญ้า","เด็ก","เรียน","กิน","นอน",
+            "พูด","ฟัง","เดิน","วิ่ง","ยืน","นั่ง","เล่น","ร้อง","หัว","ใจ",
+            "ครู","เพื่อน","พ่อ","แม่","พี่","น้อง","ของ","กิน","เล่น","เรียน",
+            "ตลาด","ห้อง","ไฟฟ้า","น้ำแข็ง","ขนม","ผลไม้","โต๊ะเรียน","เก้าอี้ไม้","ช้อน","ส้อม",
+            "แก้ว","ถ้วย","จาน","หม้อ","เตา","หนังสือ","ดินสอ","ปากกา","ยางลบ","สมุด",
+            "กระดาษ","ประตู","หน้าต่าง","กำแพง","หลังคา","ไม้","หิน","ทราย","ดอกไม้","หญ้า",
+            "ฟ้าใส","ทะเลน้ำ","ภูเขา","ทุ่งนา","แสงแดด","ดวงจันทร์","ดวงดาว","รอยยิ้ม","เสียงหัวเราะ","น้ำตา"
+        ],
+        medium: [
+            "สวัสดี","ความสุข","เรียนหนังสือ","ประเทศไทย","เพื่อนสนิท","อาหารอร่อย","เทคโนโลยี","ความฝัน","จิตใจ","ธรรมชาติ",
+            "วิทยาศาสตร์","ประวัติศาสตร์","คณิตศาสตร์","การเดินทาง","สนามบิน","โรงพยาบาล","ร้านอาหาร","เครื่องดนตรี","โทรทัศน์","โทรศัพท์",
+            "แก้วน้ำ","ปากกา","ดินสอ","สมุดบันทึก","การบ้าน","ตลาดสด","ภูเขาสูง","ทะเลสวย","สวนสาธารณะ","ถนนใหญ่",
+            "การอ่านหนังสือ","การเขียนบทความ","การคิดวิเคราะห์","การสื่อสาร","การฟังเพลง","การเต้นรำ","การออกกำลังกาย","การท่องเที่ยว","การเรียนรู้","การทำงาน",
+            "โรงเรียนมัธยม","มหาวิทยาลัย","การสอบเข้า","ห้องสมุด","ห้องเรียน","ห้องวิทยาศาสตร์","ครูใหญ่","อาจารย์","เพื่อนร่วมชั้น","นักเรียนใหม่",
+            "ตลาดนัด","ห้างสรรพสินค้า","ซุปเปอร์มาร์เก็ต","ร้านกาแฟ","ร้านหนังสือ","ร้านเสื้อผ้า","ร้านขายของ","ร้านขนม","ร้านอาหารตามสั่ง","ร้านขายยา",
+            "ท้องฟ้าสีคราม","พระอาทิตย์ขึ้น","พระอาทิตย์ตก","พระจันทร์เต็มดวง","ดวงดาวระยิบ","สายลมพัด","เสียงนกร้อง","เสียงฝนตก","ฟ้าร้อง","สายฟ้าแลบ",
+            "การทำอาหาร","การต้ม","การทอด","การผัด","การนึ่ง","การอบ","การปรุงรส","วัตถุดิบ","เครื่องปรุง","สูตรอาหาร"
+        ],
+        hard: [
+            "โปรแกรมคอมพิวเตอร์","จินตนาการสร้างสรรค์","ประสบการณ์ชีวิต","ความรับผิดชอบ","การสื่อสารมวลชน","ระบบสารสนเทศ","การวิเคราะห์ข้อมูล","เทคโนโลยีสารสนเทศ","การประมวลผลภาพ","การจำลองสถานการณ์",
+            "วิศวกรรมคอมพิวเตอร์","ความมั่นคงปลอดภัยไซเบอร์","การจัดการฐานข้อมูล","กระบวนการพัฒนา","สถาปัตยกรรมระบบ","การบริหารจัดการโครงการ","วิธีการเชิงตัวเลข","โครงสร้างข้อมูล","ปัญญาประดิษฐ์","การเรียนรู้ของเครื่อง",
+            "วิทยาการข้อมูล","การขุดข้อมูล","การประมวลผลภาษา","การรู้จำเสียงพูด","ระบบเครือข่ายคอมพิวเตอร์","เทคโนโลยีเครือข่าย","การรักษาความปลอดภัยเครือข่าย","การจัดการระบบเครือข่าย","การเข้ารหัสข้อมูล","อัลกอริทึมการค้นหา",
+            "โครงข่ายประสาทเทียม","การประมวลผลแบบขนาน","ระบบกระจาย","การจัดตารางเวลา","ระบบปฏิบัติการ","วิศวกรรมซอฟต์แวร์","การทดสอบซอฟต์แวร์","การควบคุมคุณภาพซอฟต์แวร์","การวิเคราะห์ความต้องการ","การออกแบบซอฟต์แวร์",
+            "วิศวกรรมฮาร์ดแวร์","สถาปัตยกรรมคอมพิวเตอร์","วงจรดิจิทัล","วงจรอนาล็อก","ระบบฝังตัว","การออกแบบไมโครชิป","การควบคุมอัตโนมัติ","หุ่นยนต์อุตสาหกรรม","การประมวลผลสัญญาณ","การประมวลผลภาพดิจิทัล",
+            "ระบบสนับสนุนการตัดสินใจ","การจำลองทางคณิตศาสตร์","การวิเคราะห์เชิงสถิติ","การคำนวณเชิงตัวเลข","การหาค่าเหมาะที่สุด","การคำนวณเชิงวิวัฒนาการ","ทฤษฎีเกม","การจำลองทางเศรษฐศาสตร์","การพยากรณ์เวลา","การวิเคราะห์เชิงทำนาย"
+        ]
+    };
+
+    const wordsEN = {
+        easy: [
+            "cat","dog","sun","sky","run","hot","cold","love","day","time",
+            "pen","book","car","bus","rain","tree","leaf","cup","bed","box",
+            "egg","fish","ball","milk","road","ship","map","moon","star","bag",
+            "shoe","key","door","wall","hand","foot","red","blue","green","big",
+            "small","boy","girl","yes","no","one","two","three","four","five","six",
+            "seven","eight","nine","ten","food","water","light","dark","good","bad",
+            "happy","sad","fast","slow","open","close","up","down","left","right",
+            "sit","stand","walk","jump","eat","drink","sleep","read","write","play",
+            "watch","listen","talk","smile","cry","home","room","house","street","shop",
+            "train","plane","bike","phone","card","coin","clock","chair","table","bag"
+        ],
+
+        medium: [
+            "happy","school","friendship","holiday","computer","internet","teacher","student","garden","family",
+            "travel","hospital","market","library","airport","music","guitar","coffee","pencil","notebook",
+            "homework","mountain","beach","public","street","building","science","history","biology","cooking",
+            "picture","village","farmer","engineer","doctor","nurse","driver","singer","actor","artist",
+            "football","basketball","volleyball","swimming","running","walking","reading","writing","drawing","painting",
+            "kitchen","bathroom","bedroom","livingroom","window","mirror","stairs","roof","floor","garden",
+            "holiday","vacation","summer","winter","spring","autumn","festival","birthday","wedding","party",
+            "station","police","fireman","postman","airport","harbor","marketplace","university","college","lecture",
+            "science","physics","chemistry","maths","algebra","geometry","history","geography","language","culture"
+        ],
+
+        hard: [
+            "imagination","programming","responsibility","extraordinary","application","information","communication","environment","architecture","engineering",
+            "development","cybersecurity","organization","mathematics","university","translation","transportation","administration","observation","investigation",
+            "documentation","configuration","visualization","representation","implementation","integration","computation","optimization","innovation","exploration",
+            "evaluation","classification","prediction","recommendation","simulation","virtualization","artificial","intelligence","machinelearning","neuralnetwork",
+            "database","algorithm","encryption","authentication","synchronization","parallelism","distributed","quantum","mechanics","probability",
+            "statistics","hypothesis","experiment","laboratory","scientific","philosophy","psychology","sociology","anthropology","linguistics",
+            "translation","interpretation","organization","management","leadership","motivation","negotiation","collaboration","cooperation","partnership",
+            "entrepreneurship","investment","finance","marketing","advertising","globalization","sustainability","biodiversity","climatology","meteorology",
+            "astronomy","astrophysics","cosmology","biotechnology","nanotechnology","robotics","automation","innovation","creativity","productivity"
+        ]
+    };
+
+
+    let words = [];
+    let score = 0;
+    let time = 30;
+    let timer;
+    let totalTyped = 0;
+    const wordElement = document.getElementById('word');
+    const textInput = document.getElementById('text');
+    const scoreElement = document.getElementById('score');
+    const timeElement = document.getElementById('time');
+    const wpmElement = document.getElementById('wpm');
+    const progressBar = document.getElementById('progressBar');
+
+    function getRandomWord() {
+        return words[Math.floor(Math.random() * words.length)];
+    }
+
+    function showWord() {
+        wordElement.innerHTML = getRandomWord();
+    }
+
+    function startGame() {
+        score = 0;
+        time = 30;
+        totalTyped = 0;
+        const lang = document.getElementById('language').value;
+        const level = document.getElementById('level').value;
+
+        words = (lang === "th") ? wordsTH[level] : wordsEN[level];
+
+        scoreElement.innerHTML = "คะแนน: " + score;
+        timeElement.innerHTML = "เวลา: " + time + " วินาที";
+        wpmElement.innerHTML = "WPM: 0";
+        progressBar.style.width = "100%";
+        progressBar.style.background = "#22c55e";
+
+        showWord();
+        textInput.value = '';
+        textInput.focus();
+        clearInterval(timer);
+        timer = setInterval(countDown, 1000);
+    }
+
+    function countDown() {
+        time--;
+        timeElement.innerHTML = "เวลา: " + time + " วินาที";
+        wpmElement.innerHTML = "WPM: " + Math.round((totalTyped / ((30 - time) / 60)) || 0);
+        let percent = (time / 30) * 100;
+        progressBar.style.width = percent + "%";
+        if (percent <= 50 && percent > 20) progressBar.style.background = "#facc15"; 
+        if (percent <= 20) progressBar.style.background = "#ef4444";
+
+        if (time <= 0) {
+            clearInterval(timer);
+            showPopup();
+        }
+    }
+
+    function showPopup() {
+        document.getElementById('overlay').style.display = "block";
+        document.getElementById('resultPopup').style.display = "block";
+        document.getElementById('finalScore').innerHTML = "คะแนนรวม: " + score;
+        document.getElementById('finalWPM').innerHTML = "WPM เฉลี่ย: " + Math.round(totalTyped / 0.5);
+    }
+
+    function closePopup() {
+        document.getElementById('overlay').style.display = "none";
+        document.getElementById('resultPopup').style.display = "none";
+    }
+
+    textInput.addEventListener('input', () => {
+        if (textInput.value.trim() === wordElement.innerHTML) {
+            score++;
+            totalTyped++;
+            scoreElement.innerHTML = "คะแนน: " + score;
+            textInput.value = '';
+            showWord();
+        }
+    });
+</script>
+</body>
+</html>
